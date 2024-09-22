@@ -1,0 +1,23 @@
+#map { height: 50vh; }
+
+@keyframes fade { 
+    from { opacity: 0.5; } 
+}
+
+.blinking {
+    animation: fade 1s infinite alternate;
+}
+
+.message-read {
+    color: #888888;
+}
+.message-unread {
+    color: #000000;
+}
+
+.destination-tooltip {
+    background-color: red; 
+    color: #FFFFFF; 
+    border: 1px solid #000000; 
+    padding: 4px;
+}

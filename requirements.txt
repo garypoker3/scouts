@@ -1,0 +1,12 @@
+
+pip install django daphne
+
+or 
+
+python -m pip install daphne
+
+https://docs.djangoproject.com/en/5.1/howto/deployment/asgi/daphne/ 
+
+Make sure to use >=Django 4.2 . Otherwise, you will get errors like   'TypeError: async_generator object is not iterable..' when using async views.
+
+django-admin --version

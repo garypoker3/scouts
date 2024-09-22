@@ -1,0 +1,80 @@
+{% extends "scouts/layout.html" %}
+{% load static %}
+
+{% block script %}
+<script src="{% static 'scouts/script.js' %}"></script>
+
+<!--leaflet map links-->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+<!-- Make sure you put this AFTER Leaflet's CSS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+crossorigin=""></script>
+
+<!-- simulates geolocation for testing purposes -->
+<script src="{% static 'scouts/geolocation-simulator.js' %}"></script>
+<script src="{% static 'scouts/simulator.js' %}"></script>
+
+{% endblock %}
+
+{% block body %}
+
+<span id="user-span" data-is_authenticated="{{ user.is_authenticated }}" data-user_id="{{ user.id }}"></span>
+
+<hr class="my-0">
+
+<div class="d-flex justify-content-between mx-0 my-1">
+     <div id="accuracy" class="alert px-1 py-1 mx-1 mb-1" role="alert"></div>
+     
+     <div class="form-check form-switch my-1">
+          <input class="form-check-input" type="checkbox" id="autoFitBoundsSwitch" checked>
+          <label class="form-check-label" for="autoFitBoundsSwitch">Auto Zoom</label>
+     </div>
+
+     <button class="btn btn-sm btn-outline-primary my-1 ml-auto" id="zoom-to-all">Zoom to All</button>
+
+     {% if user.is_authenticated %}
+          <button class="btn btn-sm btn-outline-primary my-1 ml-auto" id="start-simulator">Start Simulator</button>
+          <a class="ml-auto" id="stop-simulator" href="{% url 'index' %}" style="display: none;">
+               <button class="btn btn-sm btn-outline-primary my-1"> Exit Simulator </button>
+          </a>
+     {% endif %}
+</div>
+
+<div id="map" class="border border-secondary"></div>
+
+{% if user.is_authenticated %}
+<div id="message-new" class="d-flex my-3 d-none">
+     <button class="btn btn-sm btn-secondary my-0 me-2 p-1" onclick="saveMessage()">send</button>
+     <input  type="text" id="message-input" 
+          class="form-control flex-grow-1 p-0" maxlength="64" onkeydown="handleEnterKey(event)">
+</div>
+<div id="messages" class="border border-secondary my-2 p-1" style="height: 30vh; overflow-y: auto;">
+          
+     {% for message in messages %}
+         <div style="background-color: aliceblue;" 
+               id="{{message.id}}" 
+               data-read="{{message.read}}" 
+               data-sender-id="{{message.sender.id}}"
+               data-sender="{{message.sender}}"
+               data-latlng="{{message.latlng}}"
+          >
+            <div style="font-size: small; color: grey;" class="d-flex gap-3">
+               <span id="message-time-{{message.id}}" data-utc-time="{{ message.time|date:'c' }}">{{ message.time }}</span> 
+               
+               {{message.sender_display}} 
+               
+               {% if not message.read and message.sender.id != user.id %}
+                    <a class="flex-grow-1 text-end" href="#" data-message_id="{{message.id}}" onclick="markMessageAsRead(this.dataset.message_id)">Mark as read</a>
+               {% endif %}
+            </div>
+            <p id="message-text-{{message.id}}" class="message-{% if message.read %}read{% else %}unread{% endif %}">{{message.text}}</p>
+         </div>
+     {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
