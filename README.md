@@ -55,7 +55,7 @@ The "Scouts" web application stands out significantly from previous projects in 
 In summary, the "Scouts" application distinguishes itself through its unique focus on real-time geolocation tracking and mapping, advanced server-client communication methods (including the use of Daphne for SSE), and complex multi-user interactions. Its implementation of features like SSE, async Django calls, and geolocation simulation, combined with its practical application for team-based location tracking and communication, sets it apart as a more technically advanced and distinctly different project compared to previous assignments in the course.
 #
 
-### How to run application
+## How to run application
 
 ***Prerequisites:***
   
@@ -130,7 +130,7 @@ In summary, the "Scouts" application distinguishes itself through its unique foc
    - On smaller screens, pull down the browser page from the top and flick up for full view.
 ---
 
-### What key files are there:
+## What key files are there:
 
 **models.py**
 Defines several models: Scout (extends AbstractUser), Unit (with a unique title and commander), Position (stores spatial points for Scouts), Marker (alerts for Units), Destination (special Marker for Scouts), and Message (communication between Scouts). Includes Color and Alert enums for predefined choices.
