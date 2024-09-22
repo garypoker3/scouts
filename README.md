@@ -1,4 +1,4 @@
-	The “Scouts” web application is designed for geolocation-based activities, suitable for various uses such as scouting, military recon ops, or outdoor games. It allows users to navigate to destinations, communicate within their team, and track movements in real-time.
+The “Scouts” web application is designed for geolocation-based activities, suitable for various uses such as scouting, military recon ops, or outdoor games. It allows users to navigate to destinations, communicate within their team, and track movements in real-time.
 
 **Key Features:**
 	
@@ -30,7 +30,7 @@
 
 ## <span style="color: red;"> Distinctiveness and Complexity: </span>
 
-	The "Scouts" web application stands out significantly from previous projects in both its core functionality and technical implementation:
+The "Scouts" web application stands out significantly from previous projects in both its core functionality and technical implementation:
 
 1. Map and Geolocation-Driven: Unlike any previous project, this application is centered around interactive mapping and real-time geolocation tracking. It leverages the Leaflet.js library for advanced map controls and dynamic GeoJSON layer management.
 
@@ -62,21 +62,20 @@ In summary, the "Scouts" application distinguishes itself through its unique foc
 `! Make sure to use >=Django 4.2 . Otherwise, you will get errors like    'TypeError: async_generator object is not iterable..' when using async calls.`
 
 
-****install daphne:****  `pip install django daphne`
+****install daphne:****   `pip install django daphne`
 
 ****apply migration:****  `python manage.py migrate`
 
 ****create superuser:****  `python manage.py createsuperuser`
 
-
 ****start the app:****  `python manage.py runserver`
 
 
 #### Usage Tips:
-	•	Ensure geolocation services are enabled on the device.
-	•	Allow browser permission for location access.
-	•	Use the ‘Start Simulator’ to test movement visibility.
-	•	Utilize map navigation features for better control.
+-	Ensure geolocation services are enabled on the device.
+-	Allow browser permission for location access.
+-	Use the ‘Start Simulator’ to test movement visibility.
+-	Utilize map navigation features for better control.
 
 #### Usage instructions:
 
