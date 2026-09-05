@@ -1,32 +1,53 @@
 # Scouts — real-time team geolocation
 
-Final project (*capstone*) for **HarvardX CS50W — Web Programming with Python and
-JavaScript**, submitted September 2024. The capstone brief required an application of the
-student's own design, distinct from the course's predefined projects.
+Scouts tracks a team on a live map. Members see each other move in real time, commanders set
+destinations that members confirm, and messaging is scoped to a unit. It suits anything where
+a group needs to see where its people are and coordinate them — scouting, search parties,
+outdoor events, field crews.
 
-Scouts tracks a team on a live map: members see each other move in real time, commanders set
-destinations that members confirm, and messaging is scoped to a unit.
+Django on the back end, Leaflet on the front, Server-Sent Events between them. Built in 2024,
+originally as my final project for HarvardX's CS50W.
 
-**How it works**
+## How it works
 
-- **Django async views** served by **Daphne** over ASGI, pushing **Server-Sent Events** to the
-  browser's `EventSource` — server-to-client updates with no client-side polling. This is why
-  Django **≥ 4.2** is a hard requirement; earlier versions raise
-  `TypeError: async_generator object is not iterable` on the async model queries.
-- **Leaflet** for the map, with dynamic GeoJSON layers, auto-zoom and zoom-to-all, plus touch
-  handling for mobile browsers.
-- `Scout` extends `AbstractUser`; `Unit` owns a commander; `Destination` subclasses `Marker`
-  through a primary-key one-to-one so a scout can hold exactly one. `TextChoices` enums for
-  colour and alert type.
-- A **geolocation simulator** (`simulator.js`, `geolocation-simulator.js`) drives synthetic
-  movement, so real-time tracking can be demonstrated and tested without physically walking
-  around.
-- Device and browser geolocation capability detection, with accuracy reported back to the user.
+- **Server-Sent Events over ASGI.** Position updates, messages and destination changes are
+  pushed from server to browser through a long-lived `EventSource` connection served by
+  **Daphne** — no client-side polling. The endpoint is an **async Django view** doing async
+  model queries, which is why Django **≥ 4.2** is a hard requirement: earlier versions raise
+  `TypeError: async_generator object is not iterable`.
+- **Leaflet** renders the map with dynamic GeoJSON layers, auto-zoom that follows a moving
+  scout, zoom-to-all, and touch handling for mobile browsers.
+- **The data model.** `Scout` extends `AbstractUser`; `Unit` holds a commander through a
+  `OneToOneField`; `Position` records waypoints; `Destination` subclasses `Marker` through a
+  **primary-key one-to-one**, which is what enforces "one destination per scout" at the
+  database rather than in application code. `TextChoices` enums cover colour and alert type.
+- **A geolocation simulator** (`simulator.js`, `geolocation-simulator.js`) drives synthetic
+  movement, so the real-time tracking can be demonstrated and tested without physically
+  walking around with a phone.
+- **Capability detection** for device and browser geolocation, with the accuracy the device
+  actually reports surfaced to the user rather than hidden.
 
-**A known design limitation, stated up front:** `Position.latlng` and `Marker.latlng` store a
-stringified `lat/lng` in a `CharField`. That is a consequence of the course's SQLite
-constraint — proper spatial types need PostgreSQL with PostGIS, and the model carries a
-comment saying so. It is the first thing to change if this were ever built for real.
+### A known design limitation, stated up front
+
+`Position.latlng` and `Marker.latlng` store a stringified `lat/lng` in a `CharField`. That is
+a consequence of building on SQLite: real spatial types need PostgreSQL with PostGIS, and the
+model carries a comment saying so. Storing coordinates as text rules out spatial indexing and
+any query more interesting than "give me the last point" — it is the first thing to change if
+this were ever built for real.
+
+## Features
+
+- **Users and units** — users register, then are allocated to a unit through the Django admin.
+  Units have a commander and a colour.
+- **Live map** — scouts appear as named icons; clicking one shows their unit and commander.
+- **Real-time tracking** — scouts see their own position and their unit members' positions as
+  they move. Accuracy depends on the device's GPS and browser permissions.
+- **Messaging** — within a unit. Messages appear both on the map and in a list, with read
+  receipts back to the sender.
+- **Destinations** — commanders set a destination by clicking the map; the scout gets a marker
+  and a notification, and confirms receipt. Unconfirmed destinations stay visible.
+- **Simulation mode** — drive a scout along a synthetic path to verify visibility to others.
+- **Mobile-friendly** — the map is usable on a phone, which is where the geolocation is real.
 
 ## Quick start
 
@@ -39,185 +60,62 @@ python manage.py runserver
 ```
 
 `db.sqlite3` ships with throwaway demo data (`a1`, `a2`, `admin`) so the map has something on
-it on first load. Create your own superuser as above to reach `/admin/`, where units,
-commanders and scout allocations are configured.
+it on first load. Create your own superuser as above to reach `/admin/`.
 
-Geolocation needs a secure context, so testing on a real phone means tunnelling the dev
-server. `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` take extra hosts from the environment:
+Browser geolocation needs a secure context, so testing on a real phone means tunnelling the
+dev server. `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` take extra hosts from the environment:
 
 ```bash
 DJANGO_EXTRA_HOSTS=<subdomain>.ngrok-free.app python manage.py runserver
 ```
 
-`DJANGO_SECRET_KEY` and `DJANGO_DEBUG` are read from the environment too; the checked-in
+`DJANGO_SECRET_KEY` and `DJANGO_DEBUG` are read from the environment too. The checked-in
 fallbacks are development-only and are not production values.
 
----
+## Using it
 
-## Original CS50W submission notes
+**Setup** — in the Django admin:
 
-The “Scouts” web application is designed for geolocation-based activities, suitable for various uses such as scouting, military recon ops, or outdoor games. It allows users to navigate to destinations, communicate within their team, and track movements in real-time.
+- Assign scouts to units at `/admin/scouts/scout/`
+- Allocate commanders to units at `/admin/scouts/unit/`
 
-**Key Features:**
-	
-1.	User and Unit Management:
-	◦	Users must be registered and allocated to a unit.
-	◦	Units and their commanders are set up using the Django Administration module.
+A registered user becomes a scout once allocated to a unit. Only commanders can set
+destinations.
 
- 2. Geolocation and Mapping:
-	◦	Scouts’ positions are displayed on a map with icons and names.
-	◦	Clicking on a scout’s icon shows their unit and commander’s name.
-	◦	Features like ‘Auto Zoom’ and ‘Zoom to All’ enhance map navigation.
- 3.	Real-Time Tracking:
-	◦	Scouts can see their location and the locations of their unit members.
-	◦	Location accuracy depends on device geolocation settings and GPS signal.
- 4.	Simulation Mode:
-	◦	Scouts can simulate movement to test visibility to others.
-	◦	‘Auto Zoom’ helps follow the scout’s movement on the map.
- 5.	Messaging:
-	◦	Messaging is enabled within the same unit.
-	◦	Messages appear on the map and in a message list.
-	◦	Unread messages can be marked as read, notifying the sender.
- 6.	Destination Setting:
-	◦	Unit commanders can set new destinations for scouts.
-	◦	Scouts receive notifications and can confirm new destination received.
+**On the map**
 
- 7.	Map Navigation:
-	◦	Users can zoom and pan the map to navigate.
-	◦	Map interaction is user friendly and mobile-responsive.
+- Your own position is a blinking orange circle; click it for coordinates. Reported accuracy
+  in metres and a red/green status sit in the toolbar.
+- Other scouts are named icons. Click one to see their unit and commander.
+- `Auto Zoom` follows position changes; `Zoom to All` fits everything into view. Scroll to
+  zoom, drag to pan, or hold Shift and use the arrow keys after clicking the map.
 
-## <span style="color: red;"> Distinctiveness and Complexity: </span>
+**Messaging** — click a scout's icon, press `Message`, type, then `Send` or Enter. Messages
+pop up on the recipient's map and land in their message list. Unread messages resurface on
+login and can be marked read from either the map pop-up or the list.
 
-The "Scouts" web application stands out significantly from previous projects in both its core functionality and technical implementation:
+**Destinations (commanders)** — click a scout's icon, press `Set Destination`, then click the
+map. The scout receives a pop-up and a marker, and confirms; the commander gets the
+confirmation back.
 
-1. Map and Geolocation-Driven: Unlike any previous project, this application is centered around interactive mapping and real-time geolocation tracking. It leverages the Leaflet.js library for advanced map controls and dynamic GeoJSON layer management.
+**Simulation** — press `Start Simulator`, and turn on `Auto Zoom` to follow the movement.
 
-2. Real-Time Updates via Server-Sent Events (SSE): A key distinguishing feature is the implementation of SSE for real-time updates. This allows for immediate server-to-client communication without client-side polling, a significant departure from the request-response model used in previous projects like the social network or e-commerce site. Notably, the application utilizes Daphne, an ASGI server, to handle SSE efficiently, enabling true asynchronous communication capabilities.
+## Key files
 
-3. Asynchronous Server-Side Processing: The application utilizes async methods and async model querying in Django, a more advanced approach not seen in previous projects. This enables efficient handling of concurrent requests and real-time data processing.
+| File | What it does |
+|---|---|
+| `scouts/models.py` | `Scout`, `Unit`, `Position`, `Marker`, `Destination`, `Message`, plus the `Color` and `Alert` enums |
+| `scouts/views.py` | Request handlers and the async SSE endpoint |
+| `scouts/templates/scouts/index.html` | The map UI — Leaflet control, toolbox, message list |
+| `scouts/static/scouts/script.js` | Map interaction, SSE subscription and event handling, fetch calls to the API |
+| `scouts/static/scouts/simulator.js`, `geolocation-simulator.js` | Synthetic movement for testing SSE and map updates without moving |
+| `scouts/static/scouts/styles.css` | Blinking position indicator, message status, map tooltips |
+| `scouts/static/scouts/*.svg` | Colour-coded map icons |
 
-4. Geolocation Simulation: A unique feature is the inclusion of a custom geolocation simulator (using simulator.js and geolocation-simulator.js). This tool allows for testing and demonstrating the application's real-time tracking capabilities, adding a layer of complexity not present in previous projects.
+## Credits
 
-5. Device and Browser Capability Checking: The application includes sophisticated logic to verify device and browser geolocation support, assessing accuracy and providing appropriate user feedback. This level of device-specific optimization was not present in previous projects.
-
-6. Enum Models in Django: The use of models.TextChoices for enumeration in Django models represents a more advanced data modeling approach compared to previous projects.
-
-7. Mobile-Optimized Design: While responsiveness has been a consideration in past projects, this application goes further by optimizing for mobile devices with touch screen support and handling UI changes specific to mobile browsers when the window is not active.
-
-8. Complex User Roles and Permissions: The implementation of distinct roles (scouts, commanders) with different capabilities (e.g., setting destinations) adds a layer of complexity to user management and access control.
-
-9. Multi-User Real-Time Interaction: The combination of real-time tracking, messaging, and destination setting/confirming creates a dynamic, multi-user environment that is more complex than the static or semi-dynamic interactions in previous projects.
-
-10. Integration of Multiple Technologies: The project seamlessly integrates various technologies (Django, JavaScript, Leaflet.js, SSE, Daphne, async programming) in a way that creates a cohesive, real-time application, demonstrating a higher level of technical integration than previous projects.
-
-In summary, the "Scouts" application distinguishes itself through its unique focus on real-time geolocation tracking and mapping, advanced server-client communication methods (including the use of Daphne for SSE), and complex multi-user interactions. Its implementation of features like SSE, async Django calls, and geolocation simulation, combined with its practical application for team-based location tracking and communication, sets it apart as a more technically advanced and distinctly different project compared to previous assignments in the course.
-#
-
-## How to run application
-
-***Prerequisites:***
-  
-`! Make sure to use >=Django 4.2 . Otherwise, you will get errors like    'TypeError: async_generator object is not iterable..' when using async calls.`
-
-
-****install daphne:****   `pip install django daphne`
-
-****apply migration:****  `python manage.py migrate`
-
-****create superuser:****  `python manage.py createsuperuser`
-
-****start the app:****  `python manage.py runserver`
-
-
-#### Usage Tips:
--	Ensure geolocation services are enabled on the device.
--	Allow browser permission for location access.
--	Use the ‘Start Simulator’ to test movement visibility.
--	Utilize map navigation features for better control.
-
-#### Usage instructions:
-
-1. **Initial Setup**:
-   - Create a Django 'SuperUser' to access the Administration module.
-   - Use Django Administration module to set up units, commanders, and allocate scouts.
-   - Assign scouts to units: `http://localhost:8000/admin/scouts/scout/`
-   - Allocate commanders to units: `http://localhost:8000/admin/scouts/unit/`
-
-2. **User Roles**:
-   - A registered user becomes a Scout when allocated to a unit.
-   - Only commanders can appoint destinations to scouts.
-
-3. **Geolocation**:
-   - Enable device geolocation and browser permission to view your position on the map.
-   - Your location appears as a blinking orange circle. Click it to see coordinates.
-   - Accuracy (in meters) and status (Red/Green) are shown in the toolbar.
-   - Desktop browser accuracy may vary depending on the provider.
-
-4. **Map Features**:
-   - Scout positions are shown as icons with names on the map.
-   - Click a scout's icon to see their unit and commander's name.
-   - Logged-in scouts see their unit name in brackets next to their name.
-   - Scouts can view their location, unit members' locations, and other units' scouts.
-
-5. **Map Navigation**:
-   - Use 'Auto Zoom' to automatically focus on location changes.
-   - 'Zoom to All' brings all map items into view.
-   - To set destinations outside current view, scroll to zoom or drag the map.
-   - Use Shift + arrow keys for navigation (click on map while holding Shift).
-
-6. **Simulation**:
-   - Use 'Start Simulator' to test movement visibility.
-   - Enable 'Auto Zoom' to follow simulated movement.
-
-7. **Messaging**:
-   - Messaging is limited to scouts within the same unit.
-   - To send a message: click scout's icon, press 'Message', type, then 'Send' or hit Enter.
-   - Messages appear on the receiver's map and in the messages list.
-   - Mark messages as read via map pop-up or messages list.
-   - Unread messages pop up on login and show 'unread' status.
-
-8. **Destination Setting** (Commanders only):
-   - Click scout's icon, press 'Set Destination'.
-   - Click on map to set new destination (cursor changes to cross-hair).
-   - Scouts receive a pop-up message and map marker for new destinations.
-   - Scouts confirm destinations; commanders receive confirmation messages.
-   - Unconfirmed destinations remain visible until confirmed.
-
-9. **Mobile Usage**:
-   - The app is mobile-friendly.
-   - On smaller screens, pull down the browser page from the top and flick up for full view.
----
-
-## What key files are there:
-
-**models.py**
-Defines several models: Scout (extends AbstractUser), Unit (with a unique title and commander), Position (stores spatial points for Scouts), Marker (alerts for Units), Destination (special Marker for Scouts), and Message (communication between Scouts). Includes Color and Alert enums for predefined choices.
-
-**index.html**
-Main UI template that serves as the core of the application's frontend. It incorporates the Leaflet map control, a map interaction toolbox menu, and a dynamic messages list. The file includes essential references to the Leaflet library's JavaScript and CSS files, ensuring proper map functionality and styling.
-
-**script.js**
-File manages all UI interactions, with a focus on map manipulation and its associated navigation controls. It handles Server-Sent Events (SSE) subscriptions and events, enabling real-time updates. The file also contains functions for making API fetch calls to the server, facilitating seamless communication between the frontend and backend.
-
-**geolocation-simulator.js and simulator.js**
-These files contain the logic for simulating geolocation data. They are crucial for testing SSE messaging and map interactions in scenarios where actual geolocation changes are not feasible. This simulation capability allows for comprehensive testing and demonstration of the app's real-time tracking features.
-
-**styles.css**
-File defines styles for key dynamic elements such as the blinking position indicator, message status, and map feature tooltips.
-
-The static folder also contains a collection of color-coded icons. These icons are utilized to represent various markers and features on the map
-
----
-
-References:
-- Leaflet  interactive map v. 1.9.4  https://leafletjs.com/
-- Geolocation-simulator https://github.com/russellsamora/geolocation-simulator  
-- Server Sent Events implementation using Daphne    
-
-  - https://docs.djangoproject.com/en/5.0/howto/deployment/asgi/daphne/
-
-
-  - https://www.photondesigner.com/articles/server-sent-events-daphne 
-	the client side, uses the standard EventSource API, which is supported by all browsers and makes using an SSE endpoint pretty easy. The EventSource instance establishes a persistent connection to an HTTP server to receive the events sent by the server in a text/event-stream format
-
-------------------------------------
+- [Leaflet](https://leafletjs.com/) 1.9.4 for the interactive map
+- [geolocation-simulator](https://github.com/russellsamora/geolocation-simulator) by Russell Samora
+- SSE over Daphne, following the
+  [Django ASGI deployment docs](https://docs.djangoproject.com/en/5.0/howto/deployment/asgi/daphne/)
+  and [this write-up by Photon Designer](https://www.photondesigner.com/articles/server-sent-events-daphne)
