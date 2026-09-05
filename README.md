@@ -1,3 +1,61 @@
+# Scouts — real-time team geolocation
+
+Final project (*capstone*) for **HarvardX CS50W — Web Programming with Python and
+JavaScript**, submitted September 2024. The capstone brief required an application of the
+student's own design, distinct from the course's predefined projects.
+
+Scouts tracks a team on a live map: members see each other move in real time, commanders set
+destinations that members confirm, and messaging is scoped to a unit.
+
+**How it works**
+
+- **Django async views** served by **Daphne** over ASGI, pushing **Server-Sent Events** to the
+  browser's `EventSource` — server-to-client updates with no client-side polling. This is why
+  Django **≥ 4.2** is a hard requirement; earlier versions raise
+  `TypeError: async_generator object is not iterable` on the async model queries.
+- **Leaflet** for the map, with dynamic GeoJSON layers, auto-zoom and zoom-to-all, plus touch
+  handling for mobile browsers.
+- `Scout` extends `AbstractUser`; `Unit` owns a commander; `Destination` subclasses `Marker`
+  through a primary-key one-to-one so a scout can hold exactly one. `TextChoices` enums for
+  colour and alert type.
+- A **geolocation simulator** (`simulator.js`, `geolocation-simulator.js`) drives synthetic
+  movement, so real-time tracking can be demonstrated and tested without physically walking
+  around.
+- Device and browser geolocation capability detection, with accuracy reported back to the user.
+
+**A known design limitation, stated up front:** `Position.latlng` and `Marker.latlng` store a
+stringified `lat/lng` in a `CharField`. That is a consequence of the course's SQLite
+constraint — proper spatial types need PostgreSQL with PostGIS, and the model carries a
+comment saying so. It is the first thing to change if this were ever built for real.
+
+## Quick start
+
+```bash
+python -m venv .venv && . .venv/Scripts/activate   # Linux/macOS: . .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+`db.sqlite3` ships with throwaway demo data (`a1`, `a2`, `admin`) so the map has something on
+it on first load. Create your own superuser as above to reach `/admin/`, where units,
+commanders and scout allocations are configured.
+
+Geolocation needs a secure context, so testing on a real phone means tunnelling the dev
+server. `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` take extra hosts from the environment:
+
+```bash
+DJANGO_EXTRA_HOSTS=<subdomain>.ngrok-free.app python manage.py runserver
+```
+
+`DJANGO_SECRET_KEY` and `DJANGO_DEBUG` are read from the environment too; the checked-in
+fallbacks are development-only and are not production values.
+
+---
+
+## Original CS50W submission notes
+
 The “Scouts” web application is designed for geolocation-based activities, suitable for various uses such as scouting, military recon ops, or outdoor games. It allows users to navigate to destinations, communicate within their team, and track movements in real-time.
 
 **Key Features:**

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,23 +20,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-cfqas7228z3y48!b18y=_=w5r&ut2pgj&7p757%l)6r)ip!bts"
+# SECURITY WARNING: keep the secret key used in production secret.
+# Read from the environment; the fallback exists only so the project runs
+# straight after a clone for review.
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY", "django-insecure-local-development-key-not-for-production"
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# SECURITY WARNING: don't run with debug turned on in production.
+DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    "example-subdomain.ngrok-free.app",
-]
+# Extra hosts come from the environment, comma-separated. Handy when tunnelling
+# the dev server through ngrok to test geolocation on a real phone, which is the
+# only way to exercise the GPS path properly:
+#   DJANGO_EXTRA_HOSTS=<subdomain>.ngrok-free.app python manage.py runserver
+_extra_hosts = [h.strip() for h in os.environ.get("DJANGO_EXTRA_HOSTS", "").split(",") if h.strip()]
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://example-subdomain.ngrok-free.app",
-]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", *_extra_hosts]
 
-# ngrok http --domain=example-subdomain.ngrok-free.app 8000
+CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in _extra_hosts]
 
 # Application definition
 
